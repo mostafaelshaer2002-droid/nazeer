@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نذير - حرائق مصر</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  html, body { margin:0; height:100%; font-family: system-ui, "Segoe UI", Tahoma, sans-serif; }
+  #bar { padding:8px 12px; background:#1f2937; color:#fff; font-size:14px; }
+  #bar b { color:#fbbf24; }
+  #map { height: calc(100% - 78px); }
+  #note { padding:6px 12px; font-size:12px; background:#f3f4f6; color:#374151; }
+</style>
+</head>
+<body>
+<div id="bar">جارٍ التحميل…</div>
+<div id="map"></div>
+<div id="note">المصدر: NASA FIRMS (أقمار VIIRS). القمر لا يرى كل الحرائق، خصوصًا الصغيرة أو تحت السحب. النقاط تقريبية وليست دليل مخالفة.</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map').setView([27.0, 30.5], 6);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 12, attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+
+const bar = document.getElementById('bar');
+fetch('data/fires.json')
+  .then(r => { if (!r.ok) throw new Error('ملف البيانات غير موجود بعد'); return r.json(); })
+  .then(d => {
+    d.fires.forEach(f => {
+      const high = f.conf === 'h';
+      L.circleMarker([f.lat, f.lon], {
+        radius: 5, color: high ? '#b91c1c' : '#f59e0b',
+        fillOpacity: 0.7, weight: 1
+      }).addTo(map).bindPopup(
+        `التاريخ: ${f.date}<br>الساعة (UTC): ${f.time}<br>الثقة: ${f.conf}` +
+        (f.frp != null ? `<br>قوة الحرارة: ${f.frp} MW` : '')
+      );
+    });
+    bar.innerHTML = `آخر تحديث: <b>${d.updated_utc} UTC</b> — عدد الحرائق في آخر ${d.days} أيام: <b>${d.count}</b>`;
+  })
+  .catch(e => { bar.textContent = 'تعذّر عرض البيانات: ' + e.message; });
+</script>
+</body>
+</html>
